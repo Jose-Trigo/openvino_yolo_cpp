@@ -50,23 +50,22 @@ int main() {
     std::string video_path   = "brt_presentation.mp4";
     std::string model_dir    = "yolo_nano_v2_1_class_640_no_filter_openvino_model";
     std::string model_xml    = model_dir + "/yolo_nano_v2_1_class_640_no_filter.xml";
-    std::string output_video = "output_cpp.avi";
+    std::string output_video = "output_cpp.mp4";
 
     std::cout << "OpenVINO YOLO Inference Benchmark (C++)\n";
     std::cout << "Model: " << model_xml << "\n";
     std::cout << "Video: " << video_path << "\n";
 
+    // ---------------- OpenVINO: load model ----------------
     ov::Core core;
     std::shared_ptr<ov::Model> model = core.read_model(model_xml);
 
-    auto input_port = model->input();
-    std::cout << "Model input shape: ";
-    for (auto d : input_port.get_shape()) std::cout << d << " ";
-    std::cout << "\n";
-
+    // ---------------- PrePostProcessor ----------------
     using namespace ov::preprocess;
+
     PrePostProcessor ppp(model);
 
+    // Input description
     auto& input = ppp.input(0);
 
     input.tensor()
@@ -77,24 +76,26 @@ int main() {
     input.preprocess()
         .convert_element_type(ov::element::f32)
         .convert_color(ColorFormat::RGB)
-        .scale({255.0f}); // we’ll resize with OpenCV, so no resize here
+        .resize(ResizeAlgorithm::RESIZE_LINEAR)
+        .scale({255.0f});
 
     input.model()
-        .set_layout("NHWC"); // model is 1x640x640x3 after preprocessing
+        .set_layout("NCHW");
 
+    // Output description
     ppp.output(0)
         .tensor()
         .set_element_type(ov::element::f32);
 
     model = ppp.build();
 
-    ov::CompiledModel compiled_model = core.compile_model(
-        model,
-        "AUTO",
-        ov::hint::performance_mode(ov::hint::PerformanceMode::THROUGHPUT)
-    );
-    ov::InferRequest infer_request = compiled_model.create_infer_request();
+    // ---------------- Compile model ----------------
+    ov::CompiledModel compiled_model = core.compile_model(model, "CPU");
+    ov::InferRequest infer_request   = compiled_model.create_infer_request();
 
+    ov::Output<const ov::Node> output = compiled_model.output();
+
+    // ---------------- Open video ----------------
     cv::VideoCapture cap(video_path);
     if (!cap.isOpened()) {
         std::cerr << "Error: Could not open video.\n";
@@ -109,16 +110,15 @@ int main() {
     std::cout << "Total frames: " << total_frames << "\n";
     std::cout << "Resolution: " << width << "x" << height << ", FPS: " << fps << "\n";
 
-    int fourcc = cv::VideoWriter::fourcc('M','J','P','G');
     cv::VideoWriter writer(
         output_video,
-        fourcc,
+        cv::VideoWriter::fourcc('m','p','4','v'),
         fps > 0 ? fps : 25.0,
         cv::Size(width, height)
     );
 
     if (!writer.isOpened()) {
-        std::cerr << "Error: Could not open output file for writing.\n";
+        std::cerr << "Error: Could not open output file.\n";
         return 1;
     }
 
@@ -127,45 +127,29 @@ int main() {
 
     while (true) {
         cv::Mat frame;
-        if (!cap.read(frame)) {
-            std::cout << "No more frames or failed to read frame.\n";
-            break;
-        }
+        if (!cap.read(frame)) break;
         frame_count++;
+
+        int img_h = frame.rows;
+        int img_w = frame.cols;
 
         auto t0 = std::chrono::high_resolution_clock::now();
 
-        // Resize frame to 640x640 so tensor shape matches model input
-        cv::Mat resized;
-        cv::resize(frame, resized, cv::Size(640, 640));
-
-        if (!resized.isContinuous()) {
-            resized = resized.clone();
-        }
-
+        // ---------------- Input tensor ----------------
         ov::Tensor input_tensor(
             ov::element::u8,
-            ov::Shape{1, 640, 640, 3},
-            resized.data
+            ov::Shape{1, static_cast<size_t>(img_h), static_cast<size_t>(img_w), 3},
+            frame.data
         );
         infer_request.set_input_tensor(input_tensor);
 
+        // ---------------- Inference ----------------
         infer_request.infer();
 
+        // ---------------- Get output ----------------
         ov::Tensor output_tensor = infer_request.get_output_tensor();
-        auto out_shape = output_tensor.get_shape(); // expect [1, 5, 8400]
+        auto out_shape = output_tensor.get_shape(); // [1, 5, 8400]
         const float* out_data = output_tensor.data<const float>();
-
-        if (frame_count == 1) {
-            std::cout << "Output shape: ";
-            for (auto d : out_shape) std::cout << d << " ";
-            std::cout << "\n";
-        }
-
-        if (out_shape.size() != 3 || out_shape[1] != 5) {
-            std::cerr << "Unexpected output shape, skipping frame.\n";
-            continue;
-        }
 
         int num_cols = static_cast<int>(out_shape[2]);
         std::vector<Detection> detections;
@@ -180,10 +164,10 @@ int main() {
 
             if (score < YOLO_CONFIDENCE) continue;
 
-            float cx = x * width / 640.0f;
-            float cy = y * height / 640.0f;
-            float bw = w * width / 640.0f;
-            float bh = h * height / 640.0f;
+            float cx = x * img_w / 640.0f;
+            float cy = y * img_h / 640.0f;
+            float bw = w * img_w / 640.0f;
+            float bh = h * img_h / 640.0f;
 
             int x1 = static_cast<int>(cx - bw / 2.0f);
             int y1 = static_cast<int>(cy - bh / 2.0f);
@@ -203,6 +187,7 @@ int main() {
         double dt = std::chrono::duration<double>(t1 - t0).count();
         times.push_back(dt);
 
+        // ---------------- Draw + write ----------------
         cv::Mat annotated = frame.clone();
         for (const auto& det : final_dets) {
             cv::rectangle(annotated, det.box, cv::Scalar(0, 255, 0), 2);
@@ -219,15 +204,13 @@ int main() {
 
         writer.write(annotated);
 
-        if (frame_count % 50 == 0) {
-            std::cout << "Processed " << frame_count << "/" << total_frames << "\n";
+        if (frame_count % 100 == 0) {
+            std::cout << "Processed " << frame_count << "/" << total_frames << " frames\n";
         }
     }
 
     cap.release();
     writer.release();
-
-    std::cout << "Total frames actually processed: " << frame_count << "\n";
 
     if (!times.empty()) {
         double avg = std::accumulate(times.begin(), times.end(), 0.0) / times.size();

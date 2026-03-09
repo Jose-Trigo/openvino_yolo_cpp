@@ -15,3 +15,30 @@ set PATH=C:\libs\opencv\build\x64\vc16\bin;%PATH%
 
 cmake -D OpenCV_ARCH=x64 -D OpenCV_RUNTIME=vc16 -D OpenCV_STATIC=OFF -G "NMake Makefiles" ..
 cmake --build .
+
+
+
+
+
+
+
+
+###### PC EFACEC
+
+cd C:\Users\11032\repos\openvino_yolo_cpp
+rmdir /S /Q build
+mkdir build
+cd build
+
+call "C:\Intel\openvino_2026\setupvars.bat"
+
+set OpenCV_DIR=C:\libs\opencv\build 
+set PATH=C:\libs\opencv\build\x64\vc16\bin;%PATH%
+
+cmake -DCMAKE_BUILD_TYPE=Debug -D OpenCV_ARCH=x64 -D OpenCV_RUNTIME=vc16 -D OpenCV_STATIC=OFF -G "NMake Makefiles" ..  
+cmake -D OpenCV_ARCH=x64 -D OpenCV_RUNTIME=vc16 -D OpenCV_STATIC=OFF -G "NMake Makefiles" ..
+cmake --build .
+
+.\build\ov_yolo_video.exe
+
+

@@ -1,10 +1,10 @@
 #include <openvino/openvino.hpp>
-#include <openvino/core/preprocess/pre_post_process.hpp>
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <chrono>
 #include <numeric>
 #include <vector>
+#include <cstring>
 
 static const float YOLO_CONFIDENCE = 0.2f;
 static const float IOU_THRESHOLD   = 0.45f;
@@ -50,12 +50,13 @@ int main() {
     std::string video_path   = "brt_presentation.mp4";
     std::string model_dir    = "yolo_nano_v2_1_class_640_no_filter_openvino_model";
     std::string model_xml    = model_dir + "/yolo_nano_v2_1_class_640_no_filter.xml";
-    std::string output_video = "output_cpp.avi";
+    std::string output_video = "output_cpp.avi";  // use AVI + MJPG
 
     std::cout << "OpenVINO YOLO Inference Benchmark (C++)\n";
     std::cout << "Model: " << model_xml << "\n";
     std::cout << "Video: " << video_path << "\n";
 
+    // ---------------- OpenVINO: load model ----------------
     ov::Core core;
     std::shared_ptr<ov::Model> model = core.read_model(model_xml);
 
@@ -64,37 +65,10 @@ int main() {
     for (auto d : input_port.get_shape()) std::cout << d << " ";
     std::cout << "\n";
 
-    using namespace ov::preprocess;
-    PrePostProcessor ppp(model);
+    ov::CompiledModel compiled_model = core.compile_model(model, "CPU");
+    ov::InferRequest infer_request   = compiled_model.create_infer_request();
 
-    auto& input = ppp.input(0);
-
-    input.tensor()
-        .set_element_type(ov::element::u8)
-        .set_layout("NHWC")
-        .set_color_format(ColorFormat::BGR);
-
-    input.preprocess()
-        .convert_element_type(ov::element::f32)
-        .convert_color(ColorFormat::RGB)
-        .scale({255.0f}); // we’ll resize with OpenCV, so no resize here
-
-    input.model()
-        .set_layout("NHWC"); // model is 1x640x640x3 after preprocessing
-
-    ppp.output(0)
-        .tensor()
-        .set_element_type(ov::element::f32);
-
-    model = ppp.build();
-
-    ov::CompiledModel compiled_model = core.compile_model(
-        model,
-        "AUTO",
-        ov::hint::performance_mode(ov::hint::PerformanceMode::THROUGHPUT)
-    );
-    ov::InferRequest infer_request = compiled_model.create_infer_request();
-
+    // ---------------- Open video ----------------
     cv::VideoCapture cap(video_path);
     if (!cap.isOpened()) {
         std::cerr << "Error: Could not open video.\n";
@@ -109,7 +83,9 @@ int main() {
     std::cout << "Total frames: " << total_frames << "\n";
     std::cout << "Resolution: " << width << "x" << height << ", FPS: " << fps << "\n";
 
+    // Use MJPG in AVI – very robust
     int fourcc = cv::VideoWriter::fourcc('M','J','P','G');
+
     cv::VideoWriter writer(
         output_video,
         fourcc,
@@ -135,23 +111,37 @@ int main() {
 
         auto t0 = std::chrono::high_resolution_clock::now();
 
-        // Resize frame to 640x640 so tensor shape matches model input
+        // -------- Manual preprocessing: BGR -> RGB, resize to 640x640, normalize --------
         cv::Mat resized;
         cv::resize(frame, resized, cv::Size(640, 640));
 
-        if (!resized.isContinuous()) {
-            resized = resized.clone();
+        cv::Mat rgb;
+        cv::cvtColor(resized, rgb, cv::COLOR_BGR2RGB);
+
+        cv::Mat float_img;
+        rgb.convertTo(float_img, CV_32F, 1.0f / 255.0f);
+
+        // HWC -> CHW
+        std::vector<cv::Mat> chw(3);
+        cv::split(float_img, chw); // 3 x (640x640)
+
+        ov::Tensor input_tensor(ov::element::f32, {1, 3, 640, 640});
+        float* data = input_tensor.data<float>();
+
+        for (int c = 0; c < 3; ++c) {
+            std::memcpy(
+                data + c * 640 * 640,
+                chw[c].data,
+                640 * 640 * sizeof(float)
+            );
         }
 
-        ov::Tensor input_tensor(
-            ov::element::u8,
-            ov::Shape{1, 640, 640, 3},
-            resized.data
-        );
         infer_request.set_input_tensor(input_tensor);
 
+        // ---------------- Inference ----------------
         infer_request.infer();
 
+        // ---------------- Get output ----------------
         ov::Tensor output_tensor = infer_request.get_output_tensor();
         auto out_shape = output_tensor.get_shape(); // expect [1, 5, 8400]
         const float* out_data = output_tensor.data<const float>();
@@ -203,6 +193,7 @@ int main() {
         double dt = std::chrono::duration<double>(t1 - t0).count();
         times.push_back(dt);
 
+        // ---------------- Draw + write ----------------
         cv::Mat annotated = frame.clone();
         for (const auto& det : final_dets) {
             cv::rectangle(annotated, det.box, cv::Scalar(0, 255, 0), 2);
