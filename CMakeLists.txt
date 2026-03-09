@@ -11,18 +11,22 @@ find_package(OpenVINO REQUIRED)       # OpenVINO runtime & headers
 find_package(OpenCV REQUIRED)
 
 # ---------------- Create executable ----------------
-add_executable(ov_yolo_video main.cpp)
+add_executable(ov_yolo_video 
+    main.cpp
+    inference.cpp
+)
 
 # ---------------- Include directories ----------------
 target_include_directories(ov_yolo_video
     PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}    # For inference.h
         ${OpenCV_INCLUDE_DIRS}
-        ${OpenVINO_INCLUDE_DIRS}   # Required for <openvino/core/preprocess/pre_post_process.hpp>
+        ${OpenVINO_INCLUDE_DIRS}
 )
 
 # ---------------- Link libraries ----------------
 target_link_libraries(ov_yolo_video
     PRIVATE
-        ${OpenCV_LIBS}             # OpenCV runtime libs
-        openvino::runtime          # OpenVINO inference runtime
+        ${OpenCV_LIBS}
+        openvino::runtime
 )
