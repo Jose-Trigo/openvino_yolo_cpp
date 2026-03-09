@@ -55,7 +55,7 @@ void Inference::InitializeModel(const std::string &model_path) {
         model, 
         "CPU",                                                              // LATENCY mode for better single-thread performance
         ov::hint::performance_mode(ov::hint::PerformanceMode::LATENCY),  // THROUGHPUT mode for better multi-threading performance
-        ov::hint::inference_precision(ov::element::f32),
+        // ov::hint::inference_precision(ov::element::f32),               // removed this just for int8 inference
         ov::num_streams(1)  // 1 stream for sequential frame processing
     );
     

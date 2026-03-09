@@ -17,7 +17,9 @@ void DrawDetections(cv::Mat &frame, const std::vector<yolo::Detection> &detectio
 
 int main() {
     std::string video_path = "brt_presentation.mp4";
-    std::string model_dir = "yolo_nano_v2_1_class_640_no_filter_openvino_model";
+    //std::string model_dir = "yolo_nano_v2_1_class_640_no_filter_openvino_model";
+    //std::string model_xml = model_dir + "/yolo_nano_v2_1_class_640_no_filter.xml";
+    std::string model_dir = "yolo_nano_v2_1_class_640_no_filter_int8_openvino_model";
     std::string model_xml = model_dir + "/yolo_nano_v2_1_class_640_no_filter.xml";
     std::string output_video = "output_cpp.avi";
     
