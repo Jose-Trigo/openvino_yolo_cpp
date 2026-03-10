@@ -16,6 +16,8 @@ void DrawDetections(cv::Mat &frame, const std::vector<yolo::Detection> &detectio
 }
 
 int main() {
+    
+
     std::string video_path = "brt_presentation.mp4";
     //std::string model_dir = "yolo_nano_v2_1_class_640_no_filter_openvino_model";
     //std::string model_xml = model_dir + "/yolo_nano_v2_1_class_640_no_filter.xml";
@@ -30,14 +32,19 @@ int main() {
     std::cout << "Model: " << model_xml << "\n";
     std::cout << "Video: " << video_path << "\n";
     
+    std::cout << "Initializing model...\n";
     // Initialize inference engine
     yolo::Inference inference(model_xml, CONFIDENCE, NMS_THRESHOLD);
+
+    std::cout << "Initializing video capture...\n";
     
     cv::VideoCapture cap(video_path);
     if (!cap.isOpened()) {
         std::cerr << "Error: Could not open video.\n";
         return 1;
     }
+
+    std::cout << "Video capture initialized.\n";
     
     int total_frames = static_cast<int>(cap.get(cv::CAP_PROP_FRAME_COUNT));
     double fps = cap.get(cv::CAP_PROP_FPS);

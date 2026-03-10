@@ -35,6 +35,8 @@ call "C:\Intel\openvino_2026\setupvars.bat"
 set OpenCV_DIR=C:\libs\opencv\build 
 set PATH=C:\libs\opencv\build\x64\vc16\bin;%PATH%
 
+set PATH=C:\Users\11032\repos\openvino_yolo_cpp\third_party_dependencies\openh264;%PATH%
+
 cmake -DCMAKE_BUILD_TYPE=Debug -D OpenCV_ARCH=x64 -D OpenCV_RUNTIME=vc16 -D OpenCV_STATIC=OFF -G "NMake Makefiles" .. 
 cmake -DCMAKE_BUILD_TYPE=Release -D OpenCV_ARCH=x64 -D OpenCV_RUNTIME=vc16 -D OpenCV_STATIC=OFF -G "NMake Makefiles" ..
 cmake -D OpenCV_ARCH=x64 -D OpenCV_RUNTIME=vc16 -D OpenCV_STATIC=OFF -G "NMake Makefiles" ..
@@ -42,4 +44,28 @@ cmake --build .
 
 .\build\ov_yolo_video.exe
 
+
+
+
+
+
+
+
+
+
+#### Runing this on another pc no msvc compiler needed
+
+## for now its the poor mans solution, you need the opencv libs, the openvinno runtime libs, and the openh264 dll
+
+just run these commands, from a cmd
+
+cd C:\Users\11032\repos\openvino_yolo_cpp
+
+call C:\Intel\openvino_2026\setupvars.bat
+
+set OpenCV_DIR=C:\libs\opencv\build
+set PATH=C:\libs\opencv\build\x64\vc16\bin;%PATH%
+set PATH=C:\Users\11032\repos\openvino_yolo_cpp\third_party_dependencies\openh264;%PATH%
+
+build\ov_yolo_video.exe
 

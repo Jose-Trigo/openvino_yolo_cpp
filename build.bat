@@ -1,5 +1,4 @@
 @echo off
-
 cd /d C:\Users\11032\repos\openvino_yolo_cpp
 
 echo Cleaning build folder...
@@ -13,6 +12,9 @@ call "C:\Intel\openvino_2026\setupvars.bat"
 echo Setting OpenCV...
 set OpenCV_DIR=C:\libs\opencv\build
 set PATH=C:\libs\opencv\build\x64\vc16\bin;%PATH%
+
+echo Adding OpenH264 to PATH...
+set PATH=C:\Users\11032\repos\openvino_yolo_cpp\third_party_dependencies\openh264;%PATH%
 
 echo Running CMake...
 cmake -G "NMake Makefiles" ^
