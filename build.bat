@@ -1,5 +1,5 @@
 @echo off
-cd /d C:\Users\11032\repos\openvino_yolo_cpp
+cd /d "%~dp0"
 
 echo Cleaning build folder...
 rmdir /S /Q build 2>nul
