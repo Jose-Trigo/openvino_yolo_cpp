@@ -23,8 +23,10 @@ int main() {
     //std::string model_xml = model_dir + "/yolo_nano_v2_1_class_640_no_filter.xml";
     //std::string model_dir = "models/yolo_nano_v2_1_class_640_no_filter_int8_openvino_model";
     //std::string model_xml = model_dir + "/yolo_nano_v2_1_class_640_no_filter.xml";
-    std::string model_dir = "models/mapillary_yolo_v8_nano_1_class_768_no_filter_v1_fp32_openvino_model";
-    std::string model_xml = model_dir + "/mapillary_yolo_v8_nano_1_class_768_no_filter_v1.xml";
+    //std::string model_dir = "models/mapillary_yolo_v8_nano_1_class_768_no_filter_v1_fp32_openvino_model";
+    //std::string model_xml = model_dir + "/mapillary_yolo_v8_nano_1_class_768_no_filter_v1.xml";
+    std::string model_dir = "models/mapillary_yolo_v8_nano_1_class_960_no_filter_v1_fp16_openvino_model";
+    std::string model_xml = model_dir + "/mapillary_yolo_v8_nano_1_class_960_no_filter_v1.xml";
     std::string output_video = "output_cpp.avi";
     
     const float CONFIDENCE = 0.2f;

@@ -43,6 +43,32 @@ run=5 frames=1093 avg_total_ms=41.6388 avg_infer_ms=33.0251 avg_io_ms=8.61322 fp
 
 
 
+## mapillary_yolo_v8_nano_1_class_960_no_filter_v1_fp16_openvino_model  ov::hint::inference_precision(ov::element::f16)
+run=1 frames=1093 avg_total_ms=53.4848 avg_infer_ms=45.8392 avg_io_ms=7.64513 fps_total=18.6969 fps_infer=21.8154 save_video=0 output=none
+run=2 frames=1093 avg_total_ms=49.6818 avg_infer_ms=42.6497 avg_io_ms=7.0316 fps_total=20.1281 fps_infer=23.4468 save_video=0 output=none
+run=3 frames=1093 avg_total_ms=48.0869 avg_infer_ms=41.4564 avg_io_ms=6.63001 fps_total=20.7957 fps_infer=24.1217 save_video=0 output=none
+run=4 frames=1093 avg_total_ms=47.9711 avg_infer_ms=41.3873 avg_io_ms=6.58332 fps_total=20.8459 fps_infer=24.162 save_video=0 output=none
+run=5 frames=1093 avg_total_ms=49.1925 avg_infer_ms=42.2317 avg_io_ms=6.96035 fps_total=20.3283 fps_infer=23.6789 save_video=0 output=none
+run=6 frames=1093 avg_total_ms=50.593 avg_infer_ms=43.4497 avg_io_ms=7.14278 fps_total=19.7656 fps_infer=23.0151 save_video=0 output=none
+run=7 frames=1093 avg_total_ms=57.6411 avg_infer_ms=48.3662 avg_io_ms=9.27437 fps_total=17.3487 fps_infer=20.6756 save_video=0 output=none
+run=8 frames=1093 avg_total_ms=55.5668 avg_infer_ms=47.545 avg_io_ms=8.02126 fps_total=17.9963 fps_infer=21.0327 save_video=0 output=none
+run=9 frames=1093 avg_total_ms=56.8148 avg_infer_ms=48.6172 avg_io_ms=8.19711 fps_total=17.601 fps_infer=20.5689 save_video=0 output=none
+run=10 frames=1093 avg_total_ms=55.8715 avg_infer_ms=47.9622 avg_io_ms=7.90875 fps_total=17.8982 fps_infer=20.8498 save_video=0 output=none
+
+
+
+## mapillary_yolo_v8_nano_1_class_960_no_filter_v1_fp32_openvino_model  ov::hint::inference_precision(ov::element::f16)
+run=1 frames=1093 avg_total_ms=59.3663 avg_infer_ms=50.7414 avg_io_ms=8.62427 fps_total=16.8446 fps_infer=19.7078 save_video=0 output=none
+run=2 frames=1093 avg_total_ms=58.842 avg_infer_ms=50.2574 avg_io_ms=8.58402 fps_total=16.9947 fps_infer=19.8976 save_video=0 output=none
+run=3 frames=1093 avg_total_ms=57.084 avg_infer_ms=48.9906 avg_io_ms=8.09282 fps_total=17.518 fps_infer=20.4121 save_video=0 output=none
+run=4 frames=1093 avg_total_ms=56.8317 avg_infer_ms=48.8185 avg_io_ms=8.01264 fps_total=17.5958 fps_infer=20.484 save_video=0 output=none
+run=5 frames=1093 avg_total_ms=57.5478 avg_infer_ms=49.3093 avg_io_ms=8.23788 fps_total=17.3769 fps_infer=20.2801 save_video=0 output=none
+
+
+
+
+
+
 
 ## mapillary_yolo_v8_small_1_class_640_no_filter_v1_fp16_openvino_model
 run=1 frames=1093 avg_total_ms=103.517 avg_infer_ms=94.73 avg_io_ms=8.78651 fps_total=9.66025 fps_infer=10.5563 save_video=0 output=none
@@ -71,3 +97,12 @@ run=2 frames=1093 avg_total_ms=140.848 avg_infer_ms=130.838 avg_io_ms=10.0098 fp
 run=3 frames=1093 avg_total_ms=137.049 avg_infer_ms=127.665 avg_io_ms=9.38346 fps_total=7.29664 fps_infer=7.83298 save_video=0 output=none
 run=4 frames=1093 avg_total_ms=135.462 avg_infer_ms=126.316 avg_io_ms=9.14606 fps_total=7.38212 fps_infer=7.91666 save_video=0 output=none
 run=5 frames=1093 avg_total_ms=135.202 avg_infer_ms=126.101 avg_io_ms=9.10038 fps_total=7.39633 fps_infer=7.93013 save_video=0 output=none
+
+
+
+
+
+
+## some observations
+
+When you export a model in FP16, the entire OpenVINO graph—weights, constants, and operator types—is already in FP16 form, so the Intel GPU can compile it directly into clean, fully optimized FP16 kernels; but when you export the same model in FP32 and then ask OpenVINO to run it in FP16, the runtime must first rewrite the entire graph by downcasting all FP32 weights, propagating FP16 precision through every layer, adjusting memory layouts, and re‑evaluating kernel fusion and scheduling, and the cost of this rewrite becomes more visible as input resolution grows because larger feature maps, heavier memory traffic, and more operations amplify even small inefficiencies, which is why the performance gap is tiny at 768×768 but clearly noticeable at 960×960 even though both models ultimately execute FP16 math on the GPU.

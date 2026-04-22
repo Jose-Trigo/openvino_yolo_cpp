@@ -18,7 +18,7 @@ public:
     Inference(const std::string &model_path, 
               const float &confidence_threshold, 
               const float &nms_threshold,
-              const cv::Size &input_shape = cv::Size(768, 768));
+              const cv::Size &input_shape = cv::Size(960, 960));
 
     void RunInference(cv::Mat &frame);
     const std::vector<Detection>& GetDetections() const { return detections_; }
